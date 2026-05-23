@@ -27,6 +27,21 @@ jobs:
         with:
           dotnet-version: 3.1.x
 
+      - name: Install UWP build tools
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installPath = & $vswhere -latest -products * -property installationPath
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe"
+          & $installer modify `
+            --installPath $installPath `
+            --quiet `
+            --wait `
+            --norestart `
+            --nocache `
+            --add Microsoft.VisualStudio.ComponentGroup.UWP.BuildTools `
+            --add Microsoft.VisualStudio.Component.Windows11SDK.22000
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
@@ -45,7 +60,7 @@ jobs:
         run: msbuild Typedown.sln /t:Restore /p:Configuration=Debug_Local /p:Platform=x64
 
       - name: Build Typedown
-        run: msbuild Dev\Typedown\Typedown.csproj /p:Configuration=Debug_Local /p:Platform=x64 /p:RestorePackages=false
+        run: msbuild Typedown.sln /t:Typedown /p:Configuration=Debug_Local /p:Platform=x64 /p:RestorePackages=false
 
       - name: Upload runnable build
         uses: actions/upload-artifact@v4
