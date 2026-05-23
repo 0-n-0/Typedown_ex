@@ -9,10 +9,17 @@ class Clipboard {
   }
 
   copy({ type, copyInfo }) {
+    if (this.contentState.selectedTableCells) {
+      return this.contentState.docCopyHandler()
+    }
     this.contentState.copyHandler(type, copyInfo)
   }
 
   cut({ type, copyInfo }) {
+    if (this.contentState.selectedTableCells) {
+      this.contentState.docCopyHandler()
+      return this.contentState.docCutHandler()
+    }
     this.contentState.copyHandler(type, copyInfo)
     this.contentState.cutHandler()
   }
