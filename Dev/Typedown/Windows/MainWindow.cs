@@ -72,7 +72,13 @@ namespace Typedown.Windows
         {
             disposables.Add(AppViewModel.SettingsViewModel.WhenPropertyChanged(nameof(SettingsViewModel.AppTheme)).Cast<AppTheme>().StartWith(AppViewModel.SettingsViewModel.AppTheme).Subscribe(SetTheme));
             disposables.Add(AppViewModel.UIViewModel.WhenPropertyChanged(nameof(UIViewModel.MainWindowTitle)).Cast<string>().StartWith(AppViewModel.UIViewModel.MainWindowTitle).Subscribe(SetTitle));
-            disposables.Add(AppViewModel.FileViewModel.NewWindowCommand.OnExecute.Subscribe(path => Utilities.Common.OpenNewWindow(new string[] { path })));
+            disposables.Add(AppViewModel.FileViewModel.NewWindowCommand.OnExecute.Subscribe(async path =>
+            {
+                if (string.IsNullOrEmpty(path))
+                    Utilities.Common.OpenNewWindow(new string[] { path });
+                else
+                    await AppViewModel.FileViewModel.OpenFile(path);
+            }));
             disposables.Add(AppViewModel.SettingsViewModel.WhenPropertyChanged(nameof(SettingsViewModel.UseMicaEffect)).Cast<bool>().StartWith(AppViewModel.SettingsViewModel.UseMicaEffect).Subscribe(EnableMicaEffect));
             disposables.Add(AppViewModel.SettingsViewModel.WhenPropertyChanged(nameof(SettingsViewModel.Topmost)).Cast<bool>().StartWith(AppViewModel.SettingsViewModel.Topmost).Subscribe(SetTopmost));
         }
@@ -144,7 +150,7 @@ namespace Typedown.Windows
                     {
                         isClosing = true;
                         await AppViewModel.FileViewModel.AutoSaveFile();
-                        if (AppViewModel.EditorViewModel.Saved || await AppViewModel.FileViewModel.AskToSave())
+                        if (await AppViewModel.DocumentTabsViewModel.CloseAllTabs())
                             ForceClose();
                     }
                 }

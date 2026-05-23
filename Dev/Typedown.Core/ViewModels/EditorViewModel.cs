@@ -153,6 +153,7 @@ namespace Typedown.Core.ViewModels
             CurrentHash = Common.SimpleHash(Markdown);
             if (!FileLoaded) await Task.Delay(100);
             Saved = FileHash == CurrentHash;
+            FileViewModel.PersistEditorStateToCurrentTab();
         }
 
         public void OnFileLoaded(JToken arg)
@@ -353,6 +354,7 @@ namespace Typedown.Core.ViewModels
                 DisplaySaved = Saved || (Settings.AutoSave && fileViewModel.FilePath != null && AutoSavedSucc);
                 if (Saved)
                     AutoBackup.DeleteBackup(fileViewModel.FilePath);
+                fileViewModel.PersistEditorStateToCurrentTab();
             }
             catch
             {

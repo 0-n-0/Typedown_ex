@@ -11,11 +11,13 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <controls:MenuBar/>
-        <controls:MainContent Grid.Row="1"/>
-        <controls:StatusBar x:Name="StatusBar" Grid.Row="2" x:Load="{x:Bind AppViewModel.SettingsViewModel.StatusBarOpen, Mode=OneWay}"/>
+        <controls:DocumentTabBar Grid.Row="1"/>
+        <controls:MainContent Grid.Row="2"/>
+        <controls:StatusBar x:Name="StatusBar" Grid.Row="3" x:Load="{x:Bind AppViewModel.SettingsViewModel.StatusBarOpen, Mode=OneWay}"/>
     </Grid>
 </Page>

@@ -1,0 +1,54 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 16
+          cache: yarn
+          cache-dependency-path: Dev/Typedown.Editor/yarn.lock
+
+      - name: Setup .NET Core 3.1 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 3.1.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install Yarn
+        run: npm install --global yarn
+
+      - name: Build editor static files
+        working-directory: Dev/Typedown.Editor
+        env:
+          CI: false
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+
+      - name: Restore NuGet packages
+        run: msbuild Typedown.sln /t:Restore /p:Configuration=Debug_Local /p:Platform=x64
+
+      - name: Build Typedown
+        run: msbuild Dev\Typedown\Typedown.csproj /p:Configuration=Debug_Local /p:Platform=x64 /p:RestorePackages=false
+
+      - name: Upload runnable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Typedown-DebugLocal-x64
+          path: Dev/Typedown/bin/x64/Debug_Local/netcoreapp3.1/win10-x64/**

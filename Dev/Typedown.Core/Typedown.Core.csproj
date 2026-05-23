@@ -175,6 +175,9 @@
     <Compile Include="Controls\EditorControls\ContextMenuItems\ImageItem.xaml.cs">
       <DependentUpon>ImageItem.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\EditorControls\DocumentTabBar.xaml.cs">
+      <DependentUpon>DocumentTabBar.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\EditorControls\EditorContainer.xaml.cs">
       <DependentUpon>EditorContainer.xaml</DependentUpon>
     </Compile>
@@ -340,6 +343,7 @@
     <Compile Include="Models\RuntimeModels\ContentState.cs" />
     <Compile Include="Models\RuntimeModels\CursorState.cs" />
     <Compile Include="Models\RuntimeModels\DimNumber.cs" />
+    <Compile Include="Models\RuntimeModels\DocumentTab.cs" />
     <Compile Include="Models\RuntimeModels\ExplorerItem.cs" />
     <Compile Include="Models\RuntimeModels\ExportConfigModels\ConfigModel.cs" />
     <Compile Include="Models\RuntimeModels\ExportConfigModels\HTMLConfigModel.cs" />
@@ -432,6 +436,7 @@
     <Compile Include="Utilities\ReactiveExtensions.cs" />
     <Compile Include="Utilities\UriHelper.cs" />
     <Compile Include="ViewModels\AppViewModel.cs" />
+    <Compile Include="ViewModels\DocumentTabsViewModel.cs" />
     <Compile Include="ViewModels\EditorViewModel.cs" />
     <Compile Include="ViewModels\FileViewModel.cs" />
     <Compile Include="ViewModels\FloatViewModel.cs" />
@@ -511,6 +516,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Controls\EditorControls\ContextMenuItems\ImageItem.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\EditorControls\DocumentTabBar.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

@@ -56,6 +56,7 @@ namespace Typedown.Core.ViewModels
                 return;
             disposables.Add(EditorViewModel.WhenPropertyChanged(nameof(EditorViewModel.DisplaySaved)).Subscribe(_ => UpdateTitle()));
             disposables.Add(FileViewModel.WhenPropertyChanged(nameof(FileViewModel.FileName)).Subscribe(_ => UpdateTitle()));
+            disposables.Add(AppViewModel.DocumentTabsViewModel.WhenPropertyChanged(nameof(DocumentTabsViewModel.CurrentTab)).Subscribe(_ => UpdateTitle()));
             disposables.Add(Observable.FromEventPattern(uiSettings, nameof(uiSettings.ColorValuesChanged)).Merge(SettingsViewModel.WhenPropertyChanged(nameof(SettingsViewModel.AppTheme))).Subscribe(_ => UpdateActualTheme()));
             UpdateTitle();
             UpdateActualTheme();

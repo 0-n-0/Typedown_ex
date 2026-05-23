@@ -30,6 +30,8 @@ namespace Typedown.Core.ViewModels
 
         public EditorViewModel EditorViewModel => ServiceProvider.GetService<EditorViewModel>();
 
+        public DocumentTabsViewModel DocumentTabsViewModel => ServiceProvider.GetService<DocumentTabsViewModel>();
+
         public EventCenter EventCenter => ServiceProvider.GetService<EventCenter>();
 
         public RemoteInvoke RemoteInvoke => ServiceProvider.GetService<RemoteInvoke>();
@@ -38,7 +40,19 @@ namespace Typedown.Core.ViewModels
 
         public string WorkFolder { get; private set; } = null;
 
-        public string FilePath { get; private set; } = null;
+        public string FilePath
+        {
+            get => DocumentTabsViewModel.CurrentTab?.FilePath;
+            private set
+            {
+                if (DocumentTabsViewModel.CurrentTab != null)
+                {
+                    DocumentTabsViewModel.CurrentTab.FilePath = value;
+                    DocumentTabsViewModel.CurrentTab.RefreshComputedProperties();
+                    NotifyCurrentFileChanged();
+                }
+            }
+        }
 
         public string ImageBasePath => string.IsNullOrEmpty(FilePath) ? SettingsViewModel.DefaultImageBasePath : Path.GetDirectoryName(FilePath);
 
@@ -68,7 +82,7 @@ namespace Typedown.Core.ViewModels
         public FileViewModel(IServiceProvider serviceProvider)
         {
             ServiceProvider = serviceProvider;
-            NewFileCommand.OnExecute.Subscribe(async _ => await NewFileFun());
+            NewFileCommand.OnExecute.Subscribe(async _ => await NewFile());
             OpenFileCommand.OnExecute.Subscribe(async x => await OpenFile(x));
             OpenFolderCommand.OnExecute.Subscribe(async x => await OpenFolder(x));
             SaveAsCommand.OnExecute.Subscribe(async _ => await SaveAs());
@@ -108,8 +122,10 @@ namespace Typedown.Core.ViewModels
         {
             try
             {
+                PersistEditorStateToCurrentTab();
                 if (SettingsViewModel.AutoSave && EditorViewModel.FileLoaded && (EditorViewModel.FileHash != EditorViewModel.CurrentHash) && FilePath != null)
                     return await Save(false);
+                PersistEditorStateToCurrentTab();
                 return FilePath != null;
             }
             catch
@@ -120,6 +136,7 @@ namespace Typedown.Core.ViewModels
 
         private async Task<bool> AutoBackupFile()
         {
+            PersistEditorStateToCurrentTab();
             if (EditorViewModel.FileHash != EditorViewModel.CurrentHash && !string.IsNullOrWhiteSpace(EditorViewModel.Markdown))
                 return await AutoBackup.Backup(FilePath, EditorViewModel.Markdown);
             else
@@ -127,10 +144,10 @@ namespace Typedown.Core.ViewModels
             return true;
         }
 
-        private async Task NewFileFun(bool postMessage = true)
+        public async Task NewFile(bool postMessage = true)
         {
-            if (!await AskToSave()) return;
-            FilePath = null;
+            if (!await PersistCurrentTabState()) return;
+            var tab = DocumentTabsViewModel.CreateTab();
             EditorViewModel.FileHash = Common.SimpleHash(Common.DefaultMarkdwn);
             string backup = null;
             if (AppViewModel.GetInstances().Where(x => x != AppViewModel).All(x => !string.IsNullOrEmpty(x.FileViewModel.FilePath)))
@@ -153,7 +170,9 @@ namespace Typedown.Core.ViewModels
                 EditorViewModel.AutoSavedSucc = false;
                 EditorViewModel.FileLoaded = true;
             }
-            EditorViewModel.History.InitHistory(Common.DefaultMarkdwn);
+            EditorViewModel.History.InitHistory(EditorViewModel.Markdown);
+            PersistEditorStateToTab(tab);
+            DocumentTabsViewModel.NotifyCurrentTabChanged();
             if (postMessage)
             {
                 MarkdownEditor?.PostMessage("LoadFile", EditorViewModel.Markdown);
@@ -162,11 +181,13 @@ namespace Typedown.Core.ViewModels
 
         public async Task<bool> OpenFile(string filePath = null)
         {
-            if (!await AskToSave())
+            if (!await PersistCurrentTabState())
                 return false;
             filePath ??= await AppViewModel.MainWindow.PickMarkdownFileAsync();
             if (filePath == null)
                 return false;
+            if (DocumentTabsViewModel.FindTab(filePath) is { } openedTab)
+                return await DocumentTabsViewModel.SelectTab(openedTab);
             return await LoadFile(filePath, true);
         }
 
@@ -196,16 +217,22 @@ namespace Typedown.Core.ViewModels
                     _ = AccessHistory.RemoveFileHistory(path);
                     throw new FileNotFoundException("File does not exist.");
                 }
-                else if (!skipSavedCheck && !await AskToSave())
+                else if (!skipSavedCheck && !await PersistCurrentTabState())
                 {
                     return false;
                 }
                 var text = await File.ReadAllTextAsync(path);
+                var tab = DocumentTabsViewModel.CurrentTab;
+                if (tab == null || (!tab.IsUntitled || !EditorViewModel.Saved || EditorViewModel.Markdown != Common.DefaultMarkdwn))
+                {
+                    tab = DocumentTabsViewModel.CreateTab();
+                }
                 EditorViewModel.FirstStart = false;
                 EditorViewModel.FileHash = Common.SimpleHash(text);
+                EditorViewModel.CurrentHash = EditorViewModel.FileHash;
                 FilePath = path;
                 _ = AccessHistory.RecordFileHistory(FilePath);
-                var backup = await CheckBackup(path, EditorViewModel.CurrentHash);
+                var backup = await CheckBackup(path, EditorViewModel.FileHash);
                 if (backup == null)
                 {
                     EditorViewModel.Markdown = text;
@@ -222,6 +249,8 @@ namespace Typedown.Core.ViewModels
                 }
                 EditorViewModel.AutoSavedSucc = true;
                 EditorViewModel.History.InitHistory(EditorViewModel.Markdown);
+                PersistEditorStateToTab(tab);
+                DocumentTabsViewModel.NotifyCurrentTabChanged();
                 if (postMessage)
                 {
                     MarkdownEditor?.PostMessage("LoadFile", new { text = EditorViewModel.Markdown, basePath = ImageBasePath });
@@ -308,6 +337,7 @@ namespace Typedown.Core.ViewModels
                 {
                     EditorViewModel.FileHash = EditorViewModel.CurrentHash;
                     EditorViewModel.Saved = true;
+                    PersistEditorStateToCurrentTab();
                     AutoBackup.DeleteBackup(FilePath);
                     _ = AccessHistory.RecordFileHistory(FilePath);
                 }
@@ -333,6 +363,7 @@ namespace Typedown.Core.ViewModels
                         FilePath = file.Path;
                         EditorViewModel.FileHash = EditorViewModel.CurrentHash;
                         EditorViewModel.Saved = true;
+                        PersistEditorStateToCurrentTab();
                         _ = AccessHistory.RecordFileHistory(FilePath);
                         return file.Path;
                     }
@@ -386,7 +417,21 @@ namespace Typedown.Core.ViewModels
 
         public async Task<bool> AskToSave()
         {
-            if (EditorViewModel.Saved || (SettingsViewModel.AutoSave && await AutoSaveFile()))
+            return await AskToSave(DocumentTabsViewModel.CurrentTab);
+        }
+
+        public async Task<bool> AskToSave(DocumentTab tab)
+        {
+            if (tab == null)
+            {
+                return true;
+            }
+            var isCurrentTab = tab == DocumentTabsViewModel.CurrentTab;
+            if (isCurrentTab)
+            {
+                PersistEditorStateToCurrentTab();
+            }
+            if (tab.Saved || (SettingsViewModel.AutoSave && isCurrentTab && tab.FilePath != null && await AutoSaveFile()))
             {
                 return true;
             }
@@ -405,10 +450,10 @@ namespace Typedown.Core.ViewModels
             switch (result)
             {
                 case ContentDialogResult.Primary:
-                    var saveResult = await Save();
+                    var saveResult = isCurrentTab ? await Save() : await Save(tab);
                     return saveResult;
                 case ContentDialogResult.Secondary:
-                    AutoBackup.DeleteBackup(FilePath);
+                    AutoBackup.DeleteBackup(tab.FilePath);
                     return true;
                 case ContentDialogResult.None:
                     return false;
@@ -427,7 +472,7 @@ namespace Typedown.Core.ViewModels
                 }
                 catch (Exception)
                 {
-                    await NewFileFun(false);
+                    await NewFile(false);
                 }
             }
             else
@@ -440,7 +485,7 @@ namespace Typedown.Core.ViewModels
                             await LoadFile(lastFile, true);
                         break;
                     default:
-                        await NewFileFun(false);
+                        await NewFile(false);
                         break;
                 }
             }
@@ -528,7 +573,7 @@ namespace Typedown.Core.ViewModels
                 window = default;
                 return false;
             }
-            window = AppViewModel.GetInstances().Where(x => x.FileViewModel.FilePath?.ToLower() == filePath.ToLower()).FirstOrDefault()?.MainWindow ?? default;
+            window = AppViewModel.GetInstances().Where(x => x.DocumentTabsViewModel.IsFileOpen(filePath)).FirstOrDefault()?.MainWindow ?? default;
             return window != default;
         }
 
@@ -540,9 +585,92 @@ namespace Typedown.Core.ViewModels
             if (fileOperation.Rename(FilePath, to))
             {
                 FilePath = to;
+                PersistEditorStateToCurrentTab();
                 return true;
             }
             return false;
+        }
+
+        public async Task<bool> PersistCurrentTabState()
+        {
+            PersistEditorStateToCurrentTab();
+            return true;
+        }
+
+        public void ApplyTabToEditor(DocumentTab tab, bool postMessage = true)
+        {
+            if (tab == null)
+            {
+                return;
+            }
+            EditorViewModel.Markdown = tab.Markdown;
+            EditorViewModel.FileHash = tab.FileHash;
+            EditorViewModel.CurrentHash = tab.CurrentHash;
+            EditorViewModel.Saved = tab.Saved;
+            EditorViewModel.AutoSavedSucc = tab.AutoSavedSucc;
+            EditorViewModel.FileLoaded = tab.FileLoaded;
+            EditorViewModel.History.ReplaceWith(tab.History);
+            NotifyCurrentFileChanged();
+            if (postMessage)
+            {
+                MarkdownEditor?.PostMessage("LoadFile", new { text = EditorViewModel.Markdown, basePath = ImageBasePath });
+            }
+        }
+
+        public void PersistEditorStateToCurrentTab()
+        {
+            PersistEditorStateToTab(DocumentTabsViewModel.CurrentTab);
+        }
+
+        private void PersistEditorStateToTab(DocumentTab tab)
+        {
+            if (tab == null)
+            {
+                return;
+            }
+            tab.Markdown = EditorViewModel.Markdown;
+            tab.FileHash = EditorViewModel.FileHash;
+            tab.CurrentHash = EditorViewModel.CurrentHash;
+            tab.Saved = EditorViewModel.Saved;
+            tab.AutoSavedSucc = EditorViewModel.AutoSavedSucc;
+            tab.FileLoaded = EditorViewModel.FileLoaded;
+            tab.History.ReplaceWith(EditorViewModel.History);
+            tab.RefreshComputedProperties();
+        }
+
+        private async Task<bool> Save(DocumentTab tab)
+        {
+            if (tab == null)
+            {
+                return true;
+            }
+            if (tab == DocumentTabsViewModel.CurrentTab)
+            {
+                return await Save();
+            }
+            if (tab.FilePath == null)
+            {
+                await DocumentTabsViewModel.SelectTab(tab);
+                return await Save();
+            }
+            var result = await WriteAllText(tab.FilePath, tab.Markdown);
+            if (result)
+            {
+                tab.FileHash = tab.CurrentHash;
+                tab.Saved = true;
+                tab.RefreshComputedProperties();
+                AutoBackup.DeleteBackup(tab.FilePath);
+                _ = AccessHistory.RecordFileHistory(tab.FilePath);
+                DocumentTabsViewModel.NotifyCurrentTabChanged();
+            }
+            return result;
+        }
+
+        public void NotifyCurrentFileChanged()
+        {
+            PropertyChanged?.Invoke(this, new(nameof(FilePath)));
+            PropertyChanged?.Invoke(this, new(nameof(FileName)));
+            PropertyChanged?.Invoke(this, new(nameof(ImageBasePath)));
         }
 
         public void Dispose()

@@ -27,6 +27,7 @@ namespace Typedown
         private static void RegisterViewModel(ServiceCollection builder)
         {
             builder.AddScoped<AppViewModel>();
+            builder.AddScoped<DocumentTabsViewModel>();
             builder.AddScoped<EditorViewModel>();
             builder.AddScoped<FileViewModel>();
             builder.AddScoped<FloatViewModel>();

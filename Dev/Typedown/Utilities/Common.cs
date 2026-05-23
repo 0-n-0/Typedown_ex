@@ -71,6 +71,21 @@ namespace Typedown.Utilities
         public static IntPtr OpenNewWindow(string[] args)
         {
             var filePath = CommandLine.GetOpenFilePath(args);
+            if (!string.IsNullOrEmpty(filePath))
+            {
+                var appWindows = XamlWindow.AllWindows.OfType<MainWindow>().ToList();
+                if (appWindows.FirstOrDefault() is MainWindow existingWindow)
+                {
+                    _ = existingWindow.Dispatcher.RunIdleAsync(async () =>
+                    {
+                        await existingWindow.AppViewModel.FileViewModel.OpenFile(filePath);
+                        if (PInvoke.IsIconic(existingWindow.Handle))
+                            PInvoke.ShowWindow(existingWindow.Handle, PInvoke.ShowWindowCommand.Restore);
+                        PInvoke.SetForegroundWindow(existingWindow.Handle);
+                    });
+                    return existingWindow.Handle;
+                }
+            }
             if (string.IsNullOrEmpty(filePath) || !FileViewModel.TryGetOpenedWindow(filePath, out var windowHWnd))
             {
                 var newWindow = new MainWindow();

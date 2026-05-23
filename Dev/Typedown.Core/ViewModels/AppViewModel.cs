@@ -18,6 +18,8 @@ namespace Typedown.Core.ViewModels
 
         public EditorViewModel EditorViewModel => ServiceProvider.GetService<EditorViewModel>();
 
+        public DocumentTabsViewModel DocumentTabsViewModel => ServiceProvider.GetService<DocumentTabsViewModel>();
+
         public FileViewModel FileViewModel => ServiceProvider.GetService<FileViewModel>();
 
         public FloatViewModel FloatViewModel => ServiceProvider.GetService<FloatViewModel>();

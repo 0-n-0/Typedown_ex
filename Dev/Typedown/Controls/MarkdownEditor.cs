@@ -257,7 +257,7 @@ namespace Typedown.Controls
                         if (File.Exists(fullPath))
                         {
                             if (FileTypeHelper.IsMarkdownFile(fullPath))
-                                AppViewModel.FileViewModel.NewWindowCommand.Execute(fullPath);
+                                AppViewModel.FileViewModel.OpenFileCommand.Execute(fullPath);
                             else
                                 Core.Utilities.Common.OpenUrl(fullPath);
                             return;

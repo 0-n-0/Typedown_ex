@@ -10,6 +10,15 @@ namespace Typedown.Core.Models
     {
         public string Text { get; set; } = null;
         public CursorState Cursor { get; set; } = null;
+
+        public HistoryModel Clone()
+        {
+            return new()
+            {
+                Text = Text,
+                Cursor = Cursor,
+            };
+        }
     }
 
     public class ContentHistory : INotifyPropertyChanged
@@ -189,6 +198,21 @@ namespace Typedown.Core.Models
             ClearHistory();
             CursorChange(new(Focus: new(Line: 0, Ch: 0), Anchor: new(Line: 0, Ch: 0)));
             ContentChange(content);
+        }
+
+        public void ReplaceWith(ContentHistory source)
+        {
+            if (source == null || source == this)
+            {
+                return;
+            }
+            commitTimer.Stop();
+            histories.Clear();
+            histories.AddRange(source.histories.ConvertAll(x => x.Clone()));
+            pending = source.pending.Clone();
+            index = source.index;
+            Undoable = source.Undoable;
+            Redoable = source.Redoable;
         }
 #pragma warning disable CS0067
         public event PropertyChangedEventHandler PropertyChanged;
