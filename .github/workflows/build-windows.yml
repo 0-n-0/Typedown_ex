@@ -58,12 +58,12 @@ jobs:
           yarn build
 
       - name: Restore NuGet packages
-        run: msbuild Typedown.sln /t:Restore /p:Configuration=Debug_Local /p:Platform=x64 /p:TargetPlatformVersion=10.0.22621.0
+        run: msbuild Dev\Typedown\Typedown.csproj /t:Restore /p:Configuration=Debug_Local /p:Platform=x64
 
       - name: Build Typedown
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          msbuild Typedown.sln /t:Typedown /p:Configuration=Debug_Local /p:Platform=x64 /p:TargetPlatformVersion=10.0.22621.0 /p:RestorePackages=false /flp:logfile=artifacts/msbuild.log;verbosity=normal
+          msbuild Dev\Typedown\Typedown.csproj /p:Configuration=Debug_Local /p:Platform=x64 /p:RestorePackages=false /flp:logfile=artifacts/msbuild.log;verbosity=normal
 
       - name: Upload runnable build
         uses: actions/upload-artifact@v4
