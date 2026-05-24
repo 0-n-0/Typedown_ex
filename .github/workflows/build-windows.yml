@@ -71,12 +71,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           msbuild Dev\Typedown\Typedown.csproj /p:Configuration=Debug_Local /p:Platform=x64 /p:TargetPlatformVersion=10.0.22621.0 /p:RestorePackages=false /p:VCRTForwarders-IncludeDebugCRT=false "/flp:logfile=artifacts/msbuild-app.log;verbosity=normal"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          msbuild Dev\Typedown\Typedown.csproj /t:Publish /p:Configuration=Debug_Local /p:Platform=x64 /p:RuntimeIdentifier=win10-x64 /p:SelfContained=true /p:TargetPlatformVersion=10.0.22621.0 /p:RestorePackages=false /p:VCRTForwarders-IncludeDebugCRT=false /p:PublishDir="$pwd\artifacts\Typedown-DebugLocal-x64\\" "/flp:logfile=artifacts/msbuild-publish.log;verbosity=normal"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload runnable build
         uses: actions/upload-artifact@v4
         with:
           name: Typedown-DebugLocal-x64
-          path: Dev/Typedown/bin/x64/Debug_Local/netcoreapp3.1/win10-x64/**
+          path: artifacts/Typedown-DebugLocal-x64/**
 
       - name: Upload build logs
         if: failure()
