@@ -61,7 +61,7 @@ jobs:
         run: |
           msbuild Dev\Typedown.Core\Typedown.Core.csproj /t:Restore /p:Configuration=Debug_Local /p:Platform=x64 /p:TargetPlatformVersion=10.0.22621.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          msbuild Dev\Typedown\Typedown.csproj /t:Restore /p:Configuration=Debug_Local /p:Platform=x64
+          msbuild Dev\Typedown\Typedown.csproj /t:Restore /p:Configuration=Debug_Local /p:Platform=x64 /p:TargetPlatformVersion=10.0.22621.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build Typedown
@@ -69,7 +69,7 @@ jobs:
           New-Item -ItemType Directory -Force artifacts | Out-Null
           msbuild Dev\Typedown.Core\Typedown.Core.csproj /p:Configuration=Debug_Local /p:Platform=x64 /p:TargetPlatformVersion=10.0.22621.0 /p:RestorePackages=false "/flp:logfile=artifacts/msbuild-core.log;verbosity=normal"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          msbuild Dev\Typedown\Typedown.csproj /p:Configuration=Debug_Local /p:Platform=x64 /p:RestorePackages=false /p:BuildProjectReferences=false "/flp:logfile=artifacts/msbuild-app.log;verbosity=normal"
+          msbuild Dev\Typedown\Typedown.csproj /p:Configuration=Debug_Local /p:Platform=x64 /p:TargetPlatformVersion=10.0.22621.0 /p:RestorePackages=false "/flp:logfile=artifacts/msbuild-app.log;verbosity=normal"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload runnable build
