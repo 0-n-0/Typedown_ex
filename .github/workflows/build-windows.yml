@@ -63,6 +63,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           msbuild Dev\Typedown\Typedown.csproj /t:Restore /p:Configuration=Debug_Local /p:Platform=x64 /p:TargetPlatformVersion=10.0.22621.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          msbuild Dev\Typedown\Typedown.csproj /t:Restore /p:Configuration=Debug_Local /p:Platform=x64 /p:RuntimeIdentifier=win10-x64 /p:TargetPlatformVersion=10.0.22621.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           msbuild Dev\Typedown\Typedown.csproj /t:Restore /p:Configuration=Debug_Local /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:SelfContained=true /p:TargetPlatformVersion=10.0.22621.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
